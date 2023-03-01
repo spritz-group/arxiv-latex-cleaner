@@ -174,17 +174,22 @@ def _remove_iffalse_block(text):
   return text
 
 
-def _remove_comments_inline(text):
+def _remove_comments_inline(text, params):
   """Removes the comments from the string 'text'."""
-  if 'auto-ignore' in text:
-    return text
-  if text.lstrip(' ').lstrip('\t').startswith('%'):
-    return ''
-  match = regex.search(r'(?<!\\)%', text)
-  if match:
-    return text[:match.end()] + '\n'
-  else:
-    return text
+  with open(params['leaks_folder'] + '/comments.txt', 'a') as f:
+    if 'auto-ignore' in text:
+      t = text
+    if text.lstrip(' ').lstrip('\t').startswith('%'):
+      t = ''
+      # f.write(text)
+    match = regex.search(r'(?<!\\)%', text)
+    if match:
+      t = text[:match.end()] + '\n'
+      f.write(text[match.end():] + '\n')
+    else:
+      t = text
+  
+  return t
 
 
 def _strip_tex_contents(lines, end_str):
@@ -221,7 +226,7 @@ def _write_file_content(content, filename):
 
 def _remove_comments_and_commands_to_delete(content, parameters):
   """Erases all LaTeX comments in the content, and writes it."""
-  content = [_remove_comments_inline(line) for line in content]
+  content = [_remove_comments_inline(line, parameters) for line in content]
   content = _remove_environment(''.join(content), 'comment')
   content = _remove_iffalse_block(content)
   for command in parameters.get('commands_only_to_delete', []):
@@ -380,6 +385,16 @@ def _keep_only_referenced(filenames, contents, strict=False):
       if _search_reference(fn, contents, strict) is not None
   ]
 
+def _keep_only_not_referenced(filenames, contents, strict=False):
+  """Returns the filenames not referenced from contents.
+
+  If not strict mode, path prefix and extension are optional.
+  """
+  return [
+      fn for fn in filenames
+      if _search_reference(fn, contents, strict) is None
+  ]
+
 
 def _keep_only_referenced_tex(contents, splits):
   """Returns the filenames referenced from the tex files themselves.
@@ -463,6 +478,13 @@ def _create_out_folder(input_folder):
 
   return out_folder
 
+def _create_leaks_folder(input_folder):
+  """Creates the leaks folder, erasing it if existed."""
+  leaks_folder = os.path.abspath(input_folder) + '_leaks'
+  _create_dir_erase_if_exists(leaks_folder)
+
+  return leaks_folder
+
 
 def run_arxiv_cleaner(parameters):
   """Core of the code, runs the actual arXiv cleaner."""
@@ -487,6 +509,7 @@ def run_arxiv_cleaner(parameters):
 
   logging.info('Collecting file structure.')
   parameters['output_folder'] = _create_out_folder(parameters['input_folder'])
+  parameters['leaks_folder'] = _create_leaks_folder(parameters['input_folder'])
 
   splits = _split_all_files(parameters)
 
@@ -532,6 +555,13 @@ def run_arxiv_cleaner(parameters):
 
   _resize_and_copy_figures_if_referenced(parameters, full_content, splits)
   logging.info('Outputs written to %s', parameters['output_folder'])
+
+  with open(parameters['leaks_folder'] + '/unused_files.txt', 'a') as f:
+    for fleaks in _keep_only_not_referenced(
+      splits['non_tex_in_root'] + splits['non_tex_not_in_root'] + splits['figures'], full_content):
+        f.write(fleaks + '\n')
+
+
 
 
 def strip_whitespace(text):
