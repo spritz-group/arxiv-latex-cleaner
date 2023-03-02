@@ -178,18 +178,17 @@ def _remove_comments_inline(text, params):
   """Removes the comments from the string 'text'."""
   with open(params['leaks_folder'] + '/comments.txt', 'a') as f:
     if 'auto-ignore' in text:
-      t = text
+      return text
     if text.lstrip(' ').lstrip('\t').startswith('%'):
-      t = ''
-      # f.write(text)
+      f.write(text)
+      return ''
     match = regex.search(r'(?<!\\)%', text)
     if match:
       t = text[:match.end()] + '\n'
-      f.write(text[match.end():] + '\n')
+      f.write(text[match.end()-1:])
+      return t
     else:
-      t = text
-  
-  return t
+      return text
 
 
 def _strip_tex_contents(lines, end_str):
