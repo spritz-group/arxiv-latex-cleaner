@@ -174,17 +174,32 @@ def _remove_iffalse_block(text):
   return text
 
 
-def _remove_comments_inline(text, params):
+def _remove_comments_inline(text, prev_line, params):
   """Removes the comments from the string 'text'."""
-  with open(params['leaks_folder'] + '/comments.txt', 'a') as f:
+  block_div = '\n'
+  comments_filename = params['leaks_folder'] + '/comments.txt'
+  if os.path.isfile(comments_filename):
+    with open(comments_filename, 'r') as f:
+      lines = f.readlines() 
+      if len(lines):
+        last_comment = lines[-1] #+ lines[-2]
+      else:
+        last_comment = None
+  else:
+    last_comment = ''
+  with open(comments_filename, 'a') as f:
     if 'auto-ignore' in text:
       return text
     if text.lstrip(' ').lstrip('\t').startswith('%'):
+      if last_comment is not None and last_comment not in prev_line:
+        f.write(block_div)
       f.write(text)
       return ''
     match = regex.search(r'(?<!\\)%', text)
     if match:
       t = text[:match.end()] + '\n'
+      if last_comment is not None and last_comment not in prev_line:
+        f.write(block_div)
       f.write(text[match.end()-1:])
       return t
     else:
@@ -225,7 +240,7 @@ def _write_file_content(content, filename):
 
 def _remove_comments_and_commands_to_delete(content, parameters):
   """Erases all LaTeX comments in the content, and writes it."""
-  content = [_remove_comments_inline(line, parameters) for line in content]
+  content = [_remove_comments_inline(line, prev_line, parameters) for prev_line, line in zip(content, content[1:])]
   content = _remove_environment(''.join(content), 'comment')
   content = _remove_iffalse_block(content)
   for command in parameters.get('commands_only_to_delete', []):
