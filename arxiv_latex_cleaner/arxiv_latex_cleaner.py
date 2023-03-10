@@ -573,7 +573,12 @@ def run_arxiv_cleaner(parameters):
   with open(parameters['leaks_folder'] + '/unused_files.txt', 'a') as f:
     for fleaks in _keep_only_not_referenced(
       splits['non_tex_in_root'] + splits['non_tex_not_in_root'] + splits['figures'], full_content):
+        leak_path = os.path.join(parameters['leaks_folder'], fleaks)
         f.write(fleaks + '\n')
+        if not os.path.isdir(os.path.dirname(leak_path)):
+          os.makedirs(os.path.dirname(leak_path))
+        os.symlink(os.path.join(os.path.abspath(parameters['input_folder']), fleaks), 
+          leak_path)
 
 
 
