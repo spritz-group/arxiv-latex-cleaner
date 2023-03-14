@@ -178,6 +178,7 @@ def _remove_comments_inline(text, prev_line, params):
   """Removes the comments from the string 'text'."""
   block_div = '\n'
   comments_filename = params['leaks_folder'] + '/comments.txt'
+
   if os.path.isfile(comments_filename):
     with open(comments_filename, 'r') as f:
       lines = f.readlines() 
@@ -200,8 +201,10 @@ def _remove_comments_inline(text, prev_line, params):
       t = text[:match.end()] + '\n'
       if last_comment is not None and last_comment not in prev_line:
         f.write(block_div)
-      f.write(text[match.end()-1:])
-      return t
+      remaining = text[match.end()-1:].strip()
+      if remaining != '%': 
+        f.write(remaining)
+      return t 
     else:
       return text
 
