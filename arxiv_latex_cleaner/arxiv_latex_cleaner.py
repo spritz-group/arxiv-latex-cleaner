@@ -276,6 +276,25 @@ def _replace_tikzpictures(content, figures):
   return content
 
 
+def _replace_includesvg(content, svg_inkscape_files):
+
+  def repl_svg(matchobj):
+    svg_path = matchobj.group(2)
+    svg_filename = os.path.basename(svg_path)
+    # search in svg_inkscape split if pdf_tex file is available
+    matching_pdf_tex_files = _keep_pattern(
+        svg_inkscape_files, ['/' + svg_filename + '-tex.pdf_tex'])
+    if len(matching_pdf_tex_files) == 1:
+      options = '' if matchobj.group(1) is None else matchobj.group(1)
+      return f'\\includeinkscape{options}{{{matching_pdf_tex_files[0]}}}'
+    else:
+      return matchobj.group(0)
+
+  content = regex.sub(r'\\includesvg(\[.*?\])?{(.*?)}', repl_svg, content)
+
+  return content
+
+
 def _resize_and_copy_figure(filename, origin_folder, destination_folder,
                             resize_image, image_size, compress_pdf,
                             pdf_resolution):
@@ -485,6 +504,12 @@ def _split_all_files(parameters):
   else:
     file_splits['external_tikz_figures'] = []
 
+  if parameters.get('svg_inkscape', None) is not None:
+    file_splits['svg_inkscape'] = _keep_pattern(
+        file_splits['all'], [parameters['svg_inkscape']])
+  else:
+    file_splits['svg_inkscape'] = []
+
   return file_splits
 
 
@@ -510,7 +535,7 @@ def run_arxiv_cleaner(parameters):
       r'\.aux$', r'\.sh$', r'\.blg$', r'\.brf$', r'\.log$', r'\.out$', r'\.ps$',
       r'\.dvi$', r'\.synctex.gz$', '~$', r'\.backup$', r'\.gitignore$',
       r'\.DS_Store$', r'\.svg$', r'^\.idea', r'\.dpth$', r'\.md5$', r'\.dep$',
-      r'\.auxlock$'
+      r'\.auxlock$', r'\.fls$', r'\.fdb_latexmk$'
   ]
 
   if not parameters['keep_bib']:
@@ -538,6 +563,11 @@ def run_arxiv_cleaner(parameters):
     logging.info('Removing comments in file %s.', tex_file)
     tex_contents[tex_file] = _remove_comments_and_commands_to_delete(
         tex_contents[tex_file], parameters)
+
+  for tex_file in tex_contents:
+    logging.info('Replacing \\includesvg calls in file %s.', tex_file)
+    tex_contents[tex_file] = _replace_includesvg(tex_contents[tex_file],
+                                                 splits['svg_inkscape'])
 
   for tex_file in tex_contents:
     logging.info('Replacing Tikz Pictures in file %s.', tex_file)
