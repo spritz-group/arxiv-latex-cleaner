@@ -221,7 +221,7 @@ def _strip_tex_contents(lines, end_str):
 
 
 def _read_file_content(filename):
-  with open(filename, 'r', encoding='utf-8') as fp:
+  with open(filename, 'r', encoding='utf-8', errors='ignore') as fp:
     lines = fp.readlines()
     lines = _strip_tex_contents(lines, '\\end{document}')
     return lines
