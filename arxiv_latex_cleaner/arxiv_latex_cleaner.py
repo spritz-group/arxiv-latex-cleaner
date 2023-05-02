@@ -136,11 +136,21 @@ def _remove_command(text, command, keep_text=False):
   return text
 
 
-def _remove_environment(text, environment):
+def _remove_environment(text, environment, params):
   """Removes '\\begin{environment}*\\end{environment}' from 'text'."""
-  return regex.sub(
+  ret = regex.sub(
       r'\\begin{' + environment + r'}[\s\S]*?\\end{' + environment + r'}', '',
       text)
+  
+  if environment == 'comment':
+    comments_filename = params['leaks_folder'] + '/comments.txt'
+    leaks = regex.findall(
+      r'\\begin{' + environment + r'}[\s\S]*?\\end{' + environment + r'}', text)
+    with open(comments_filename, 'a') as f:
+      for comment in leaks:
+        if comment: f.write(comment)
+
+  return ret
 
 
 def _remove_iffalse_block(text):
@@ -244,7 +254,7 @@ def _write_file_content(content, filename):
 def _remove_comments_and_commands_to_delete(content, parameters):
   """Erases all LaTeX comments in the content, and writes it."""
   content = [_remove_comments_inline(line, prev_line, parameters) for prev_line, line in zip(content, content[1:])]
-  content = _remove_environment(''.join(content), 'comment')
+  content = _remove_environment(''.join(content), 'comment', parameters)
   content = _remove_iffalse_block(content)
   for command in parameters.get('commands_only_to_delete', []):
     content = _remove_command(content, command, True)
