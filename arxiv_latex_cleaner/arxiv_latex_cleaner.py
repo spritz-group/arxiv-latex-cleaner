@@ -148,7 +148,7 @@ def _remove_environment(text, environment, params):
       r'\\begin{' + environment + r'}[\s\S]*?\\end{' + environment + r'}', text)
     with open(comments_filename, 'a') as f:
       for comment in leaks:
-        if comment: f.write(comment)
+        if comment: f.write(comment.replace('\n\n', '\n'))
 
   return ret
 
