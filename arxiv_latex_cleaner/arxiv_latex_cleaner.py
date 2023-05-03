@@ -254,6 +254,7 @@ def _write_file_content(content, filename):
 
 def _remove_comments_and_commands_to_delete(content, parameters):
   """Erases all LaTeX comments in the content, and writes it."""
+  content.insert(0, '')
   content = [_remove_comments_inline(line, prev_line, parameters) for prev_line, line in zip(content, content[1:])]
   content = _remove_environment(''.join(content), 'comment', parameters)
   content = _remove_iffalse_block(content)
